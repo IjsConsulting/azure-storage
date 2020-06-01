@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "azureStorageExample", "azur
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "azureFunctionsExample", "azureFunctionsExample\azureFunctionsExample.csproj", "{A043C412-47C5-4731-A2BB-97A5E809D804}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "azureDurableFunctionsExample", "azureDurableFunctionsExample\azureDurableFunctionsExample.csproj", "{994DD060-0738-4C3E-9960-13C355D358F6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{A043C412-47C5-4731-A2BB-97A5E809D804}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A043C412-47C5-4731-A2BB-97A5E809D804}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A043C412-47C5-4731-A2BB-97A5E809D804}.Release|Any CPU.Build.0 = Release|Any CPU
+		{994DD060-0738-4C3E-9960-13C355D358F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{994DD060-0738-4C3E-9960-13C355D358F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{994DD060-0738-4C3E-9960-13C355D358F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{994DD060-0738-4C3E-9960-13C355D358F6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
