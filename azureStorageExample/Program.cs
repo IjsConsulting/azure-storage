@@ -16,6 +16,10 @@ namespace azureStorageExample
             //BlobStorage Example
             var blobStorageExample = new BlobStorageExample();
             await blobStorageExample.Run();
+
+            //Queue Example
+            var queueStorageExample = new QueueStorageExample();
+            await blobStorageExample.Run();
         }
 
     }

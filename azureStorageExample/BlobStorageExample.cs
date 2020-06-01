@@ -1,104 +1,95 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 
 namespace azureStorageExample
 {
-    public class BlobStorageExample
+    /// <summary>
+    /// Examples uses v12 libraries
+    /// </summary>
+    public class BlobStorageExample : IStorageAccount
     {
-        static CloudStorageAccount storageAccount;
-        static CloudBlobClient cloudBlobClient;
-        static CloudBlobContainer cloudBlobContainer;
-        static CloudBlockBlob cloudBlockBlob;
+        string connectionString = Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING");
+
+        BlobContainerClient containerClient;
+        BlobClient blobClient;
+
         public async Task Run()
         {
-            string storageConnectionString = Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING");
+            //Create container
+            await CreateContainerAsync();
 
-            if (CloudStorageAccount.TryParse(storageConnectionString, out storageAccount))
-            {
-                //Create container
-                await CreateContainer();
-                var sourceFile = await UploadBlob();
-                var destinationFile = await DownloadBlob(sourceFile);
-                await DeleteBlob(sourceFile, destinationFile);
-            }
-            else
-            {
-                // Otherwise, let the user know that they need to define the environment variable.
-                Console.WriteLine(
-                    "A connection string has not been defined in the system environment variables. " +
-                    "Add an environment variable named 'AZURE_STORAGE_CONNECTION_STRING' with your storage " +
-                    "connection string as a value.");
-                Console.WriteLine("Press any key to exit the application.");
-                Console.ReadLine();
-            }
+            //Update a document to the blob container
+            string localFilePath = await UploadBlobAsync();
+
+            //Show the contents of the container
+            await ListBlobsAsync();
+
+            //Download the document locally
+            var downloadFilePath = await DownloadBlobAsync(localFilePath, blobClient);
+           
+            //Clean up
+            await DeleteBlobAsync(localFilePath, downloadFilePath);
         }
 
         /// <summary>
         /// Creates a Blob Container.
         /// </summary>
         /// <returns></returns>
-        private async Task CreateContainer()
+        private async Task CreateContainerAsync()
         {
-            //Create container
-            cloudBlobClient = storageAccount.CreateCloudBlobClient();
+            // Create a BlobServiceClient object which will be used to create a container client
+            BlobServiceClient blobServiceClient = new BlobServiceClient(connectionString);
 
-            // Create a container called 'quickstartblobs' and 
-            // append a GUID value to it to make the name unique.
-            cloudBlobContainer = cloudBlobClient.GetContainerReference("quickstartblobs" +
-                    Guid.NewGuid().ToString());
+            //Create a unique name for the container
+            string containerName = "quickstartblobs" + Guid.NewGuid().ToString();
 
-            await cloudBlobContainer.CreateAsync();
-
-            // Set the permissions so the blobs are public.
-            BlobContainerPermissions permissions = new BlobContainerPermissions
-            {
-                PublicAccess = BlobContainerPublicAccessType.Blob
-            };
-            await cloudBlobContainer.SetPermissionsAsync(permissions);
+            // Create the container and return a container client object
+            containerClient = await blobServiceClient.CreateBlobContainerAsync(containerName);
         }
 
         /// <summary>
         /// Uploads a file to Blob storage
         /// </summary>
         /// <returns></returns>
-        private async Task<string> UploadBlob()
+        private async Task<string> UploadBlobAsync()
         {
-            //Update container
-            // Create a file in your local MyDocuments folder to upload to a blob.
-            string localPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            string localFileName = "QuickStart_" + Guid.NewGuid().ToString() + ".txt";
-            string sourceFile = Path.Combine(localPath, localFileName);
+            // Create a local file in the ./data/ directory for uploading and downloading
+            string localPath = "./data/";
+            string fileName = "quickstart" + Guid.NewGuid().ToString() + ".txt";
+            string localFilePath = Path.Combine(localPath, fileName);
 
-            // Write text to the file.
-            File.WriteAllText(sourceFile, "Hello, World!");
+            // Write text to the file
+            await File.WriteAllTextAsync(localFilePath, "Hello, World!");
 
-            Console.WriteLine("Temp file = {0}", sourceFile);
-            Console.WriteLine("Uploading to Blob storage as blob '{0}'", localFileName);
+            // Get a reference to a blob
+            blobClient = containerClient.GetBlobClient(fileName);
 
-            // Get a reference to the blob address, then upload the file to the blob.
-            // Use the value of localFileName for the blob name.
-            cloudBlockBlob = cloudBlobContainer.GetBlockBlobReference(localFileName);
-            await cloudBlockBlob.UploadFromFileAsync(sourceFile);
+            Console.WriteLine("Uploading to Blob storage as blob:\n\t {0}\n", blobClient.Uri);
 
-            //List Blobs
-            // List the blobs in the container.
-            Console.WriteLine("List blobs in container.");
-            BlobContinuationToken blobContinuationToken = null;
-            do
+            // Open the file and upload its data
+            using FileStream uploadFileStream = File.OpenRead(localFilePath);
+            await blobClient.UploadAsync(uploadFileStream, true);
+            uploadFileStream.Close();
+
+            return localFilePath;
+        }
+
+        /// <summary>
+        /// List blobs
+        /// </summary>
+        /// <returns></returns>
+        private async Task ListBlobsAsync()
+        {
+            Console.WriteLine("Listing blobs...");
+
+            // List all blobs in the container
+            await foreach (BlobItem blobItem in containerClient.GetBlobsAsync())
             {
-                var results = await cloudBlobContainer.ListBlobsSegmentedAsync(null, blobContinuationToken);
-                // Get the value of the continuation token returned by the listing call.
-                blobContinuationToken = results.ContinuationToken;
-                foreach (IListBlobItem item in results.Results)
-                {
-                    Console.WriteLine(item.Uri);
-                }
-            } while (blobContinuationToken != null); // Loop while the continuation token is not null.
-
-            return sourceFile;
+                Console.WriteLine("\t" + blobItem.Name);
+            }
         }
 
         /// <summary>
@@ -106,43 +97,47 @@ namespace azureStorageExample
         /// </summary>
         /// <param name="sourceFile"></param>
         /// <returns></returns>
-        private async Task<string> DownloadBlob(string sourceFile)
+        private async Task<string> DownloadBlobAsync(string localFilePath, BlobClient blobClient)
         {
-            // Download the blob to a local file, using the reference created earlier.
-            // Append the string "_DOWNLOADED" before the .txt extension so that you 
-            // can see both files in MyDocuments.
-            string destinationFile = sourceFile.Replace(".txt", "_DOWNLOADED.txt");
-            Console.WriteLine("Downloading blob to {0}", destinationFile);
+            // Download the blob to a local file
+            // Append the string "DOWNLOAD" before the .txt extension 
+            // so you can compare the files in the data directory
+            string downloadFilePath = localFilePath.Replace(".txt", "DOWNLOAD.txt");
 
-            await cloudBlockBlob.DownloadToFileAsync(destinationFile, FileMode.Create);
+            Console.WriteLine("\nDownloading blob to\n\t{0}\n", downloadFilePath);
 
-            return destinationFile;
+            // Download the blob's contents and save it to a file
+            BlobDownloadInfo download = await blobClient.DownloadAsync();
+
+            using (FileStream downloadFileStream = File.OpenWrite(downloadFilePath))
+            {
+                await download.Content.CopyToAsync(downloadFileStream);
+                downloadFileStream.Close();
+            }
+
+            return downloadFilePath;
         }
 
         /// <summary>
         /// Delete Blob document
         /// </summary>
-        /// <param name="sourceFile"></param>
-        /// <param name="destinationFile"></param>
+        /// <param name="localFilePath"></param>
+        /// <param name="downloadFilePath"></param>
         /// <returns></returns>
-        private async Task DeleteBlob(string sourceFile, string destinationFile)
+        private async Task DeleteBlobAsync(string localFilePath, string downloadFilePath)
         {
-            //Delete container.
-            Console.WriteLine("Press the 'Enter' key to delete the example files, " +
-            "example container, and exit the application.");
-
+            // Clean up
+            Console.Write("Press any key to begin clean up");
             Console.ReadLine();
 
-            // Clean up resources. This includes the container and the two temp files.
-            Console.WriteLine("Deleting the container");
-            if (cloudBlobContainer != null)
-            {
-                await cloudBlobContainer.DeleteIfExistsAsync();
-            }
+            Console.WriteLine("Deleting blob container...");
+            await containerClient.DeleteAsync();
 
-            Console.WriteLine("Deleting the source, and downloaded files");
-            File.Delete(sourceFile);
-            File.Delete(destinationFile);
+            Console.WriteLine("Deleting the local source and downloaded files...");
+            File.Delete(localFilePath);
+            File.Delete(downloadFilePath);
+
+            Console.WriteLine("Done");
         }
     }
 }
