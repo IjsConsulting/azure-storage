@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob.Protocol;
 using Microsoft.Azure.Storage.Queue;
 
 namespace azureStorageExample
@@ -11,17 +9,22 @@ namespace azureStorageExample
     {
         string connectionString = Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING");
 
-
         public async Task Run()
         {
             //Create queue container
             await CreateQueueAsync();
 
+            //Insert a message into MQ
             await InsertMessageIntoQueueAsync();
 
+            //Peek inside message of MQ
             await PeekQueueMessagesAsync();
 
+            //Get Message from MQ
             await GetMessageFromQueueAsync();
+
+            //Delete Message from MQ
+            await DeleteMessageAsync();
         }
 
         /// <summary>
@@ -115,7 +118,7 @@ namespace azureStorageExample
         /// Delete a message from MQ
         /// </summary>
         /// <returns></returns>
-        private async Task DeleteMessage()
+        private async Task DeleteMessageAsync()
         {
             // Retrieve storage account from connection string
             CloudStorageAccount storageAccount = CloudStorageAccount.Parse(connectionString);
