@@ -1,26 +1,18 @@
-﻿using System;
-using System.IO;
-using System.Reflection.Metadata;
-using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
+﻿using System.Threading.Tasks;
 
 namespace azureStorageExample
 {
     class Program
     {
-
         static async Task Main()
         {
             //BlobStorage Example
             var blobStorageExample = new BlobStorageExample();
             await blobStorageExample.Run();
 
-            //Queue Example
+            //QueueStorage Example
             var queueStorageExample = new QueueStorageExample();
-            await blobStorageExample.Run();
+            await queueStorageExample.Run();
         }
-
     }
 }
